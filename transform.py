@@ -1,7 +1,8 @@
-from scipy import ndimage
+from scipy import ndimage, signal
 from math import tau
 import numpy as np
 import util
+
 
 """
 This module has various complex mathematical transformations
@@ -12,6 +13,9 @@ This module has various complex mathematical transformations
 # fourier
 
 def freqtransform(grid, shift=True):
+    """
+    Fourier/frequency transform
+    """
     f = np.fft.fft2(grid) # 2D discrete FT
     fshift = np.fft.fftshift(f) if shift else f
 
@@ -25,6 +29,10 @@ def freqtransform(grid, shift=True):
 # fourinv
 
 def invfreqtransform(amplitude, angle):
+    """
+    Inverse fourier/frequency transform
+    """
+
     fshift = amplitude * np.exp(1j * angle)
 
     grid = np.fft.ifft2(fshift)
@@ -39,6 +47,11 @@ def invfreqtransform(amplitude, angle):
 # square/circle/shape
 
 def cutout(array, mask_value, shape, radius=5):
+    """
+    Creates an array with zeros everywhere except in a defined shape
+    in the center with ones. (Can be used as a kernel.)
+    """
+
     # width, height
     w, h = array.shape
 
@@ -71,6 +84,10 @@ def cutout(array, mask_value, shape, radius=5):
 # histogram
 
 def grayscale(array):
+    """
+    Computes the histogram of the 256 grays in the image
+    """
+
     histogram, _bins = np.histogram(array, 256, (0, 255))
 
     return histogram
@@ -80,17 +97,20 @@ def grayscale(array):
 # KDE
 
 def smoothen(array, sigma=3, truncate=4):
-    # 2D convolution: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.convolve2d.html
-    # Gaussian filter: https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter.html
+    """
+    Gaussian smoothing (2d)
+    """
 
     # The following program is a more explicit version of the commented code
     # The filtered array is approximately equal convoluted array,
     #   with an error of ~1E-10 (non-significant)
 
+    # Gaussian filter: https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter.html
+
     # from scipy import ndimage
     # filtered = ndimage.gaussian_filter(array, sigma=3, output=np.float64, mode="constant", cval=0, truncate=4)
 
-    from scipy import signal
+    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.convolve2d.html
 
     # truncation radius
     radius = int(truncate * sigma + 0.5)
@@ -111,26 +131,66 @@ def smoothen(array, sigma=3, truncate=4):
 
 
 
+# KDE 1d
+
+def smoothen1d(array, sigma=3, truncate=4):
+    """
+    Gaussian smoothing (1d)
+    """
+
+    # not used: https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.convolve.html
+
+    # https://docs.scipy.org/doc/numpy/reference/generated/numpy.convolve.html
+
+    # truncation radius
+    radius = int(truncate * sigma + 0.5)
+
+    # First a 1-D Bell distribution, truncated at radius
+    sigma2 = sigma * sigma
+    x = np.arange(-radius, radius+1)
+    kernel = np.exp(-0.5 / sigma2 * x ** 2)
+
+    kernel /= kernel.sum() # normalize the integral to 1
+
+    # compute the convolution
+    convolution = np.convolve(array, kernel, mode="same")
+
+    return convolution
+
+
 
 # center
+
 def center(array):
+    """
+    Shifts the array such that it is centered at the mean.
+
+    This also changes this mean, because part of the part of the array shifted
+    outside the shape is deleted.
+    """
+
     # weighted mean of image, weighted by pixel value
     c_x, c_y = util.center(array)
 
+    # grab height and width from the shape
     h, w = array.shape
 
-    output = np.zeros_like(m)
+    # calculate offset
+    shift_x = w//2 - c_x
+    shift_y = h//2 - c_y
 
-    # TODO
-    # output[] = array[]
-
-    return output
+    # return center-shifted image
+    return ndimage.shift(array, (shift_x, shift_y))
 
 
 
 # shift
 
 def shift(array, shift_x, shift_y):
+    """
+    Shifts the image. The part of the array shifted outside the shape is
+    deleted.
+    """
 
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.shift.html
 
@@ -141,6 +201,9 @@ def shift(array, shift_x, shift_y):
 # rotate
 
 def rotate(array, angle):
+    """
+    rotates the array, using spline interpolation
+    """
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.rotate.html
 
     return ndimage.rotate(array, angle - 90, reshape=False)
@@ -157,6 +220,9 @@ def scale(array):
 #  Principal component analysis
 
 def PCA_angle(array):
+    """
+    Computes the angle of the principal component of the array
+    """
     # https://stats.stackexchange.com/questions/113485/weighted-principal-components-analysis
 
     from itertools import product
@@ -196,10 +262,45 @@ def PCA_angle(array):
 if __name__ == "__main__":
     from plot import Figure
 
-
-    #--- Example
+    #--- Smoothing
 
     if True:
+        with Figure(1, 1) as fig:
+            ax = fig.ax[0, 0]
+
+            img = util.image()
+
+            hist = smoothen1d(grayscale(img))
+
+            ax.plot(hist)
+
+            img = smoothen(img)
+
+            hist = grayscale(img)
+
+            ax.plot(hist)
+
+            hist = smoothen1d(hist)
+
+            ax.plot(hist)
+
+    #--- Centering shift
+
+    if False:
+        with Figure(1, 1) as fig:
+            ax = fig.ax[0, 0]
+
+            img = util.DUMMY_IMAGE()
+
+            img = center(img)
+
+            ax.imshow(img, cmap="gray")
+
+
+
+    #--- Fixed shift
+
+    if False:
         with Figure(1, 1) as fig:
             ax = fig.ax[0, 0]
 
@@ -219,7 +320,7 @@ if __name__ == "__main__":
 
 
 
-    #--- Example
+    #--- PCA Angles
 
     if False:
         for img in util.progress(util.images()):
@@ -227,9 +328,10 @@ if __name__ == "__main__":
         input("Press any key to continue")
 
 
-    #--- Example
 
-    if True:
+    #--- PCA Angles w/ plot
+
+    if False:
         with Figure(1, 1) as fig:
             ax = fig.ax[0, 0]
 
@@ -243,7 +345,7 @@ if __name__ == "__main__":
 
 
 
-    #--- Example
+    #--- Grayscale histogram
 
     if False:
         with Figure(1, 1) as fig:
@@ -256,30 +358,31 @@ if __name__ == "__main__":
 
 
 
-    #--- Example
+    #--- PCA Angles plot
+    if False:
+        with Figure(2, 1) as fig:
+            ax1 = fig.ax[0, 0]
+            ax2 = fig.ax[1, 0]
 
-    with Figure(2, 1) as fig:
-        ax1 = fig.ax[0, 0]
-        ax2 = fig.ax[1, 0]
+            ax1.set_xlim(-1, 1)
+            ax1.set_ylim(-1, 1)
+            ax1.set_aspect(aspect=1)
 
-        ax1.set_xlim(-1, 1)
-        ax1.set_ylim(-1, 1)
-        ax1.set_aspect(aspect=1)
+            fig.show()
 
-        fig.show()
+            for key, img_ in util.images().pad(150, 150):
+                angle = PCA_angle(img_)
+                ax1.scatter(np.cos(angle), np.sin(angle), color='red', alpha=0.1)
+                if angle < 0.1:
+                    ax2.imshow(img_, cmap="gray")
 
-        for key, img_ in util.images().pad(150, 150):
-            angle = PCA_angle(img_)
-            ax1.scatter(np.cos(angle), np.sin(angle), color='red', alpha=0.1)
-            if angle < 0.1:
-                ax2.imshow(img_, cmap="gray")
-
-            fig.update()
+                fig.update()
 
 
-    #--- Example
+    #--- Ass. examples
 
-    array = np.ones((16, 16))
-    cutout(array, mask_value=0, shape="circle", radius=5)
-    print(array)
+    if False:
+        array = np.ones((16, 16))
+        cutout(array, mask_value=0, shape="circle", radius=5)
+        print(array)
 

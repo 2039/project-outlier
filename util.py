@@ -1,5 +1,5 @@
 import numpy as np
-from math import tau, pi
+from math import tau, pi # 2*pi = tau
 from pathlib import Path
 import cv2
 
@@ -13,17 +13,29 @@ This module consists of various helper functions for images and math
 IMAGE_COUNT = 12611
 
 def minmax(x):
+    """
+    The range of an array
+    """
     return (np.min(x), np.max(x))
 
 
 
 def circle_dist(a, b):
+    """
+    The minimum angle between two straight lines through the center of a circle,
+    defined by two angles in [-pi, pi).
+    """
     # https://stackoverflow.com/questions/1878907/the-smallest-difference-between-2-angles
     phi = abs((a - b + pi ) % tau - pi)
     return phi if phi < tau/4 else pi-phi
 
 
 def _read_image(path):
+    """
+    Reads (gray) image from file and converts to array.
+
+    Black pixels correspond to the value 0, whites to 255.
+    """
     img = cv2.imread(path.as_posix())
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -33,7 +45,11 @@ def _read_image(path):
 
 def pad(array, height=100, width=100, pad_value=0):
     """
-    This ensures the array has the shape (height, width)
+    This pads the array so that it's size is (at least*) of the
+    shape (height, width)
+
+    * if the given height/width is smaller than the image's, nothing
+    is padded, and the array remains the same size.
     """
     # Get the initial array size
     array_height, array_width = array.shape
@@ -68,7 +84,8 @@ def pad(array, height=100, width=100, pad_value=0):
 
 def scale(image, antialiasing=True, box_height=100, box_width=100):
     """
-    This scales the image such that it is not taller nor wider than the maximum width/height given, while keeping the aspect ratio.
+    This scales the image such that it is not taller nor wider than the given
+    width/height, while keeping the aspect ratio.
     """
     # Get image size
     image_width, image_height = image.size
@@ -89,11 +106,16 @@ def scale(image, antialiasing=True, box_height=100, box_width=100):
 
 
 def crop(array, height=100, width=100, mode="center"):
-    pass
+    NotImplemented
 
 
 
 def image(name="1377", simple=True):
+    """
+    Loads image from file given the image id (name), and converts to array.
+
+    If simple is false, the hi-res image is loaded, otherwise the low-res one.
+    """
     path = Path(f"boneage-training-dataset" + ("-simple" * simple))
     path /= f"{name}.png"
 
@@ -105,6 +127,9 @@ def image(name="1377", simple=True):
 
 
 class image_ids:
+    """
+    An ordered sequence of the image ids
+    """
     def __init__(self):
         self.path = Path("boneage-training-dataset-simple")
 
@@ -119,6 +144,9 @@ class image_ids:
 
 
 class images:
+    """
+    An ordered sequence of the images
+    """
     def __init__(self):
         self.path = Path("boneage-training-dataset-simple")
         self.width = None
@@ -129,6 +157,7 @@ class images:
 
     @property
     def init(self):
+        """Empty image"""
         return np.zeros((self.height, self.width))
 
 
@@ -141,6 +170,9 @@ class images:
 
 
     def pad(self, width=100, height=100):
+        """
+        Pads the images in the sequence to the specified size.
+        """
         self.width = width
         self.height = height
 
@@ -152,6 +184,9 @@ class images:
 
 
     def map(self, func):
+        """
+        Applies a function to each image in the sequence
+        """
         self.seq = map(func, self.seq)
 
         return self
@@ -159,6 +194,10 @@ class images:
 
 
 def DUMMY_IMAGE():
+    """
+    Creates an example image
+    """
+
     from scipy.stats import multivariate_normal
     from math import sqrt
 
@@ -171,7 +210,7 @@ def DUMMY_IMAGE():
         (0, 1)
     ))
 
-    mean = np.array((0.0, 0.0))
+    mean = np.array((2.5, 0.0))
     cov = R @ L @ np.linalg.inv(R)
     #cov = np.array(((0.5, 0.3), (0.2, 0.5)))
 
@@ -188,24 +227,34 @@ def DUMMY_IMAGE():
 
 
 def mean(seq, init=None):
+    """
+    Computes the mean of a sequence
+    """
+
     # reduce := (left) fold
     from functools import reduce
     from operator import add
 
     # init ??= init.seq
-    init = init.seq if init is None else init
+    init = seq.init if init is None else init
 
     # average
     return reduce(add, seq, init) / len(seq)
 
 
 def angle_mean(seq, init=0):
+    """
+    Computes the vector mean of a sequence of angles
+
+    https://en.wikipedia.org/wiki/Mean_of_circular_quantities
+    """
+
     # reduce := (left) fold
     from functools import reduce
     from operator import add
 
     # init ??= init.seq
-    init = init.seq if init is None else init
+    init = seq.init if init is None else init
 
     # get unit vector given complex angle
     unit = lambda alpha: np.exp(1j * alpha)

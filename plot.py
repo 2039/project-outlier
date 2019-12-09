@@ -75,6 +75,7 @@ class Figure:
         self.pause(t)
 
 
+    # unused
     def animate(
             self,
             update_func,

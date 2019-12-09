@@ -6,7 +6,11 @@ import logging
 from plot import Figure
 from heapq import nlargest
 
-# Set debug level
+"""
+This module finds odd objects
+"""
+
+# Set logging parameters
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -19,16 +23,15 @@ formatter = logging.Formatter(
 )
 
 handler.setFormatter(formatter)
-
 logger.addHandler(handler)
 
-"""
-This module finds odd objects
-"""
 
+def PCA_angle(N=100):
+    """
+    Computes the mean angle, the finds N angles that deviates the most from
+    the mean, module pi.
+    """
 
-
-def PCA_angle():
     angles = lambda: (
         util.images()
             .pad()
@@ -38,10 +41,9 @@ def PCA_angle():
     logger.info("Calculating PCA angle mean")
     mean = util.angle_mean(angles())
 
-    logger.info("Calculating distance from mean")
+    # distances from mean angle
     distances = ((util.circle_dist(mean, angle), angle) for angle in angles())
 
-    N = 10
     logger.info(f"Finding {N} angles farthest away from mean")
     oddities = nlargest(N, zip(distances, util.image_ids()))
 
@@ -80,7 +82,7 @@ def smoothed_mean():
 
 if __name__ == "__main__":
     if True:
-        result = PCA_angle()
+        result = PCA_angle(10)
 
         print(result)
 
