@@ -10,7 +10,9 @@ This module consists of various helper functions for images and math
 
 
 
-IMAGE_COUNT = 12611
+IMAGE_PATH = Path("boneage-training-dataset-simple")
+IMAGE_COUNT = sum(1 for _ in IMAGE_PATH.iterdir()) # length of generator
+# IMAGE_COUNT = 12611
 
 def minmax(x):
     """
@@ -131,7 +133,7 @@ class image_ids:
     An ordered sequence of the image ids
     """
     def __init__(self):
-        self.path = Path("boneage-training-dataset-simple")
+        self.path = IMAGE_PATH
 
     def __iter__(self):
         image_ids_ = [int(file.stem) for file in self.path.iterdir()]
@@ -148,7 +150,7 @@ class images:
     An ordered sequence of the images
     """
     def __init__(self):
-        self.path = Path("boneage-training-dataset-simple")
+        self.path = IMAGE_PATH
         self.width = None
         self.height = None
         self.seq = (
