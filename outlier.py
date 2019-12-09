@@ -7,7 +7,7 @@ from plot import Figure
 from heapq import nlargest
 
 """
-This module finds odd objects
+This module finds anomalies
 """
 
 # Set logging parameters
@@ -29,7 +29,12 @@ logger.addHandler(handler)
 def PCA_angle(N=100):
     """
     Computes the mean angle, the finds N angles that deviates the most from
-    the mean, module pi.
+    the mean, modulo pi.
+
+    There was an issue with the angle of the PCA to be inverted 180 degrees.
+    This shouldn't affect the mean too much, but caused some images to be
+    incorrectly classified as anomalies. Thus, we consider only angles
+    between [-90, 90).
     """
 
     angles = lambda: (
