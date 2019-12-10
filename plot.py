@@ -25,8 +25,9 @@ class _Ax:
 
 class Figure:
     def __init__(self, x, y):
-        self._fig = plt.figure()
+        self._fig = plt.figure(figsize=(2*y, 2*x))
         self.gridspec = (x, y)
+        self.gridspec.update(wspace=0.05, hspace=0.05)
         self.ax = _Ax(self)
         self.axes = {}
         self._shown = False
@@ -42,7 +43,7 @@ class Figure:
             if traceback is None:
                 if not self._shown: self._fig.show(); self._fig.canvas.draw()
                 self._shown = True
-                input("Press any key to continue")
+                input("Press any key to close the figure")
                 plt.close()
             else:
                 raise
@@ -74,6 +75,9 @@ class Figure:
     def update(self, t=0.001):
         self.pause(t)
 
+
+    def save(self, path):
+        self._fig.savefig(path)
 
     # unused
     def animate(

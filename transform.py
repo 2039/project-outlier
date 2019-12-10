@@ -25,6 +25,26 @@ def freqtransform(grid, shift=True):
     return amplitude, angle
 
 
+def amplitude(grid, shift=True):
+    """
+    Fourier/frequency transform
+    """
+    f = np.fft.fft2(grid) # 2D discrete FT
+    fshift = np.fft.fftshift(f) if shift else f
+
+    return np.abs(fshift)
+
+
+def phase(grid, shift=True):
+    """
+    Fourier/frequency transform
+    """
+    f = np.fft.fft2(grid) # 2D discrete FT
+    fshift = np.fft.fftshift(f) if shift else f
+
+    return np.angle(fshift)
+
+
 
 # fourinv
 
@@ -46,7 +66,7 @@ def invfreqtransform(amplitude, angle):
 
 # square/circle/shape
 
-def cutout(array, mask_value, shape, radius=5):
+def shape(array, mask_value, shape, radius=5):
     """
     Creates an array with zeros everywhere except in a defined shape
     in the center with ones. (Can be used as a kernel.)
@@ -264,25 +284,30 @@ if __name__ == "__main__":
 
     #--- Smoothing
 
-    if True:
+    if False:
         with Figure(1, 1) as fig:
             ax = fig.ax[0, 0]
 
             img = util.image()
+            img_hi = util.image(simple=False)
 
             hist = smoothen1d(grayscale(img))
+            hist_hi = smoothen1d(grayscale(img_hi))
 
-            ax.plot(hist)
+            ax.plot(hist_hi/hist_hi.sum())
+
+            hist_hi = smoothen1d(grayscale(smoothen(img_hi)))
+            ax.plot(hist_hi/hist_hi.sum())
 
             img = smoothen(img)
 
             hist = grayscale(img)
 
-            ax.plot(hist)
+            ax.plot(hist/hist.sum())
 
             hist = smoothen1d(hist)
 
-            ax.plot(hist)
+            ax.plot(hist/hist.sum())
 
     #--- Centering shift
 
@@ -295,6 +320,8 @@ if __name__ == "__main__":
             img = center(img)
 
             ax.imshow(img, cmap="gray")
+
+            fig.update(1)
 
 
 
@@ -320,7 +347,7 @@ if __name__ == "__main__":
 
 
 
-    #--- PCA Angles
+    #--- PCA angles
 
     if False:
         for img in util.progress(util.images()):
@@ -329,7 +356,7 @@ if __name__ == "__main__":
 
 
 
-    #--- PCA Angles w/ plot
+    #--- PCA angles w/ plot
 
     if False:
         with Figure(1, 1) as fig:
@@ -358,7 +385,7 @@ if __name__ == "__main__":
 
 
 
-    #--- PCA Angles plot
+    #--- PCA angles plot
     if False:
         with Figure(2, 1) as fig:
             ax1 = fig.ax[0, 0]
@@ -381,8 +408,8 @@ if __name__ == "__main__":
 
     #--- Ass. examples
 
-    if False:
+    if True:
         array = np.ones((16, 16))
-        cutout(array, mask_value=0, shape="circle", radius=5)
+        shape(array, mask_value=0, shape="circle", radius=5)
         print(array)
 

@@ -1,6 +1,7 @@
 import numpy as np
 from math import tau, pi # 2*pi = tau
 from pathlib import Path
+from scipy import signal
 import cv2
 
 
@@ -13,6 +14,10 @@ This module consists of various helper functions for images and math
 IMAGE_PATH = Path("boneage-training-dataset-simple")
 IMAGE_COUNT = sum(1 for _ in IMAGE_PATH.iterdir()) # length of generator
 # IMAGE_COUNT = 12611
+
+ODDS = Path("odds.json") # anomalies
+
+
 
 def minmax(x):
     """
@@ -30,6 +35,30 @@ def circle_dist(a, b):
     # https://stackoverflow.com/questions/1878907/the-smallest-difference-between-2-angles
     phi = abs((a - b + pi ) % tau - pi)
     return phi if phi < tau/4 else pi-phi
+
+
+
+def max_correlation(a, b):
+    """
+    Returns the maximum correlation of two image arrays.
+    """
+
+    # compute the correlation
+    # approximately equal to the following, with an error on the order of 1E18
+    # signal.correlate2d(a/a.sum(), b/b.sum(), mode="full", boundary="fill", fillvalue=0)
+    return np.max(signal.fftconvolve(a/a.sum(), b[::-1,::-1]/b.sum(), mode="full"))
+
+
+
+
+def max_correlation1d(a, b):
+    """
+    Returns the maximum correlation of two image arrays.
+    """
+
+    # compute the correlation
+    return max(np.correlate(a/a.sum(), b/b.sum(), mode="full"))
+
 
 
 def _read_image(path):
@@ -118,7 +147,7 @@ def image(name="1377", simple=True):
 
     If simple is false, the hi-res image is loaded, otherwise the low-res one.
     """
-    path = Path(f"boneage-training-dataset" + ("-simple" * simple))
+    path = IMAGE_PATH if simple else Path("sample_images")
     path /= f"{name}.png"
 
     img = cv2.imread(path.as_posix())
@@ -127,35 +156,12 @@ def image(name="1377", simple=True):
     return img
 
 
-
-class image_ids:
-    """
-    An ordered sequence of the image ids
-    """
-    def __init__(self):
-        self.path = IMAGE_PATH
+class seq:
+    def __init__(self, seq):
+        self.seq = seq
 
     def __iter__(self):
-        image_ids_ = [int(file.stem) for file in self.path.iterdir()]
-        image_ids_.sort()
-        yield from image_ids_
-
-    def __len__(self):
-        return IMAGE_COUNT
-
-
-
-class images:
-    """
-    An ordered sequence of the images
-    """
-    def __init__(self):
-        self.path = IMAGE_PATH
-        self.width = None
-        self.height = None
-        self.seq = (
-            _read_image(self.path / f"{key}.png") for key in image_ids()
-        )
+        yield from self.seq
 
     @property
     def init(self):
@@ -163,12 +169,39 @@ class images:
         return np.zeros((self.height, self.width))
 
 
-    def __iter__(self):
-        yield from self.seq
+    def __len__(self):
+        return IMAGE_COUNT
 
+
+
+class image_ids(seq):
+    """
+    An ordered sequence of the image ids
+    """
+    def __init__(self):
+        self.path = IMAGE_PATH
+
+        image_ids_ = [int(file.stem) for file in self.path.iterdir()]
+        image_ids_.sort()
+
+        super().__init__(image_ids_)
 
     def __len__(self):
         return IMAGE_COUNT
+
+
+
+class images(seq):
+    """
+    An ordered sequence of the images
+    """
+    def __init__(self):
+        self.path = IMAGE_PATH
+        self.width = None
+        self.height = None
+        super().__init__((
+            _read_image(self.path / f"{key}.png") for key in image_ids()
+        ))
 
 
     def pad(self, width=100, height=100):
@@ -244,6 +277,7 @@ def mean(seq, init=None):
     return reduce(add, seq, init) / len(seq)
 
 
+
 def angle_mean(seq, init=0):
     """
     Computes the vector mean of a sequence of angles
@@ -266,6 +300,9 @@ def angle_mean(seq, init=0):
 
 
 def center(array):
+    """
+    Computes the weighted mean of the array
+    """
     h, w = array.shape
 
     W = np.sum(array)
@@ -278,8 +315,11 @@ def center(array):
 
 
 def progress(iterable):
+    """
+    Displays the progress state of iteration
+    """
     l = len(iterable)
-    progress_ = 0
+    progress_ = -1
     for i, element in enumerate(iterable, 1):
         p = (i*100) // l
         if p > progress_:
@@ -289,9 +329,41 @@ def progress(iterable):
 
 
 
+def store(key, values):
+    """
+    Stores a set of values into file (cache)
+    """
+    import json
+    with open(ODDS, mode="r") as rf:
+        odds = json.load(rf)
+
+    # update/add values
+    odds[key] = values
+
+    with open(ODDS, mode="w") as wf:
+        json.dump(odds, wf)
+
+
+
+def odds():
+    import json
+    with open(ODDS, mode="r") as rf:
+        odds = json.load(rf)
+        odds = {key: set(values) for key, values in odds.items()}
+
+    return odds
+
+
+
 if __name__ == "__main__":
 
     if True:
+        store("hello", [1,3,2])
+        store("world", [4,3,6])
+
+        print(odds())
+
+    if False:
         a = np.deg2rad(77)
         b = np.deg2rad(79)
 
